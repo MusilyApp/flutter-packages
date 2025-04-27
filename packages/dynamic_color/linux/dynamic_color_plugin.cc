@@ -52,30 +52,36 @@ static int get_accent_color(GtkWidget* widget) {
   const char* schema_id = "org.gnome.desktop.interface";
   const char* key = "accent-color";
 
-  if (g_settings_schema_source_lookup(g_settings_schema_source_get_default(), schema_id, TRUE)) {
+  GSettingsSchemaSource* schema_source = g_settings_schema_source_get_default();
+  if (schema_source && g_settings_schema_source_lookup(schema_source, schema_id, TRUE)) {
       settings = g_settings_new(schema_id);
       if (settings) {
-          accent_color_str = g_settings_get_string(settings, key);
+          if (g_settings_schema_source_lookup(schema_source, schema_id, TRUE)) {
+              accent_color_str = g_settings_get_string(settings, key);
 
-          if (accent_color_str != nullptr && strlen(accent_color_str) > 0) {
-              GdkRGBA parsed_color;
-              if (gdk_rgba_parse(&parsed_color, accent_color_str)) {
-                  result_color = rgba_to_argb(&parsed_color);
-                  g_debug("Color obtained from GSettings (%s): %s -> %#08x", key, accent_color_str, result_color);
+              if (accent_color_str != nullptr && strlen(accent_color_str) > 0) {
+                  GdkRGBA parsed_color;
+                  if (gdk_rgba_parse(&parsed_color, accent_color_str)) {
+                      result_color = rgba_to_argb(&parsed_color);
+                      g_debug("Color obtained from GSettings (%s): %s -> %#08x", key, accent_color_str, result_color);
+                  } else {
+                      g_warning("Failed to parse GSettings value '%s' for key '%s' as a color.", accent_color_str, key);
+                  }
               } else {
-                  g_warning("Failed to parse GSettings value '%s' for key '%s' as a color.", accent_color_str, key);
+                  g_debug("GSettings key '%s' is empty or null. Using fallback.", key);
               }
+
+              if (accent_color_str) g_free(accent_color_str);
           } else {
-               g_debug("GSettings key '%s' is empty or null. Using fallback.", key);
+              g_debug("GSettings key '%s' does not exist in schema '%s'. Using fallback.", key, schema_id);
           }
 
-          if(accent_color_str) g_free(accent_color_str);
           g_object_unref(settings);
       } else {
           g_warning("Failed to create GSettings object for schema '%s'. Using fallback.", schema_id);
       }
   } else {
-       g_debug("GSettings schema '%s' not found. Using fallback.", schema_id);
+      g_debug("GSettings schema '%s' not found. Using fallback.", schema_id);
   }
 
   if (result_color == -1) {
