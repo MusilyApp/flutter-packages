@@ -35,6 +35,9 @@ class DynamicColorPlugin {
   /// Supported on macOS starting with 10.14 (Mojave), on Windows starting with
   /// Vista, and on GTK-based Linux desktops.
   ///
+  /// If the accent color cannot be retrieved (e.g., unsupported Linux distro or GNOME version),
+  /// returns Material Deep Purple as fallback.
+  ///
   /// See also:
   ///
   /// * [Apple's introduction to macOS accent color](https://developer.apple.com/design/human-interface-guidelines/macos/overview/whats-new-in-macos/#app-accent-colors)
@@ -42,8 +45,16 @@ class DynamicColorPlugin {
   /// * [Windows' accent color](https://docs.microsoft.com/en-us/windows/apps/design/style/color#accent-color)
   /// * [Windows Aero](https://web.archive.org/web/20080812195923/http://www.microsoft.com/windows/windows-vista/features/aero.aspx?tabid=2&catid=4)
   /// * [Change colors in Windows](https://support.microsoft.com/en-us/windows/change-colors-in-windows-d26ef4d6-819a-581c-1581-493cfcc005fe)
-  static Future<Color?> getAccentColor() async {
-    final result = await channel.invokeMethod(accentColorMethodName);
-    return result == null ? null : Color(result);
+  static Future<Color> getAccentColor() async {
+    try {
+      final result = await channel.invokeMethod(accentColorMethodName);
+      if (result != null) {
+        return Color(result);
+      }
+    } catch (e) {
+      // Silently handle the error and fall through to default color
+    }
+    // Return Material Deep Purple as fallback
+    return const Color(0xFF673AB7);
   }
 }
